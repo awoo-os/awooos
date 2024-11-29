@@ -8,7 +8,7 @@ CC   := clang
 endif
 AS   := nasm
 AR   := ar
-LD   := ld
+LD   ?= ld.lld
 QEMU ?= qemu-system-${TARGET}
 CLANG_CHECK ?= clang-check
 
@@ -16,7 +16,10 @@ override CFLAGS += -std=c11 -pedantic-errors -gdwarf-2 -nostdinc     \
 					-ffreestanding -fno-stack-protector -fno-builtin \
 					-fdiagnostics-show-option -Werror -Weverything   \
 					-Wno-cast-qual -Wno-missing-prototypes -Wno-vla  \
-					-Wno-documentation-unknown-command -Wno-missing-noreturn
+					-Wno-documentation-unknown-command -Wno-missing-noreturn \
+					-Wno-reserved-identifier \
+					-Wno-unknown-warning-option \
+					-Wno-missing-field-initializers
 override LDFLAGS += -nostdlib -g --whole-archive
 override ASFLAGS +=
 
@@ -63,6 +66,19 @@ ISO_FILE := ${ISO_DIR}/${ISO_FILENAME}
 
 all: ${EXECUTABLES}
 
+version-info:
+	${CC} --version
+	@echo
+	${AS} --version
+	@echo
+	${AR} --version
+	@echo
+	${LD} --version
+	@echo
+	${QEMU} --version
+	@echo
+	${CLANG_CHECK} --version
+
 # This rule is triggered by "include make/${TARGET}.mk" if TARGET is undefined.
 # This shouldn't be automated, so print an error.
 make/.mk:
@@ -86,8 +102,8 @@ src/executables/kernel.exe: ${OBJFILES} ${LIBRARIES}
 
 iso: ${ISO_FILE}
 ${ISO_FILE}: ${EXECUTABLES}
-	@cp -r assets/isofs/ ./
-	@cp ${EXECUTABLES} isofs/
+	cp -R assets/isofs/ ./isofs
+	cp ${EXECUTABLES} ./isofs/
 	xorriso -report_about HINT -abort_on WARNING -as mkisofs -quiet -boot-info-table -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -input-charset utf-8 -o ${ISO_FILE} isofs
 
 test: lint
@@ -97,10 +113,10 @@ lint: generated_headers
 	${CLANG_CHECK} $(filter %.c,${SRCFILES}) -- ${C_INCLUDES}
 
 qemu: iso
-	${QEMU} ${QEMU_FLAGS} -m 6M -vga std -serial stdio -cdrom ${ISO_FILE}
+	${QEMU} ${QEMU_FLAGS} -m 64M -vga std -serial stdio -cdrom ${ISO_FILE}
 
 qemu-monitor: iso
-	${QEMU} ${QEMU_FLAGS} -m 6M -monitor stdio -cdrom ${ISO_FILE}
+	${QEMU} ${QEMU_FLAGS} -m 64M -monitor stdio -cdrom ${ISO_FILE}
 
 # Generate a nightly build.
 nightly:

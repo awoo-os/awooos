@@ -2,6 +2,13 @@
 # master, staging, and trying branches. (So bors can use them.)
 use_compute_credits: $CIRRUS_USER_COLLABORATOR == 'true' || $CIRRUS_BRANCH == 'master' || $CIRRUS_BRANCH == 'staging' || $CIRRUS_BRANCH == 'trying'
 
+Version_task:
+  name: Version information
+  container:
+    dockerfile: Dockerfile
+  script:
+    - make version-info
+
 Lint_task:
   container:
     dockerfile: Dockerfile
